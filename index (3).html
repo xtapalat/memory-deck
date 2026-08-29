@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#13131C">
+<title>Memory Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Spectral:ital,wght@0,300;0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#13131C;
+  --ink-2:#1B1B27;
+  --ink-3:#282634;
+  --vellum:#EDE6D8;
+  --muted:#8B879B;
+  --lamp:#E2A24C;
+  --sage:#7FA98C;
+  --rose:#C97B7B;
+  --pad:20px;
+  --radius:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ink);
+  color:var(--vellum);
+  font-family:'Spectral',Georgia,serif;
+  font-weight:300;
+  font-size:17px;
+  line-height:1.55;
+  min-height:100vh;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.wrap{max-width:520px;margin:0 auto;padding:0 var(--pad) 48px}
+
+/* ---- chrome ---- */
+.bar{
+  display:flex;align-items:baseline;gap:12px;
+  padding:calc(env(safe-area-inset-top) + 18px) 0 14px;
+  border-bottom:1px solid var(--ink-3);
+  margin-bottom:22px;
+}
+.mark{
+  font-family:'Instrument Serif',Georgia,serif;
+  font-size:25px;line-height:1;letter-spacing:.01em;
+}
+.clock{
+  margin-left:auto;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.06em;color:var(--muted);
+  text-align:right;white-space:nowrap;
+}
+.clock b{color:var(--lamp);font-weight:500}
+.iconbtn{
+  background:none;border:0;color:var(--muted);
+  font-family:'IBM Plex Mono',monospace;font-size:11px;
+  letter-spacing:.08em;padding:6px 2px;cursor:pointer;
+}
+.iconbtn:hover{color:var(--vellum)}
+
+/* ---- type ---- */
+h2{
+  font-family:'Instrument Serif',Georgia,serif;
+  font-weight:400;font-size:27px;line-height:1.15;
+  margin:0 0 4px;
+}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 14px;
+}
+.note{color:var(--muted);font-size:14.5px;margin:10px 0 0}
+
+/* ---- decks ---- */
+.deck{
+  display:flex;align-items:center;gap:14px;width:100%;
+  background:var(--ink-2);border:1px solid var(--ink-3);
+  border-radius:var(--radius);
+  padding:16px 18px;margin-bottom:10px;
+  color:var(--vellum);text-align:left;cursor:pointer;
+  font-family:inherit;font-size:18px;
+}
+.deck:active{border-color:var(--lamp)}
+.deck-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.count{
+  font-family:'IBM Plex Mono',monospace;font-size:13px;
+  color:var(--lamp);min-width:26px;text-align:right;
+}
+.count.zero{color:var(--ink-3)}
+.count.over{color:var(--muted);font-size:11px}
+
+/* ---- buttons ---- */
+.btn{
+  display:block;width:100%;
+  background:var(--ink-2);border:1px solid var(--ink-3);
+  border-radius:var(--radius);
+  color:var(--vellum);font-family:'Spectral',serif;font-size:17px;
+  padding:15px;margin-bottom:10px;cursor:pointer;
+}
+.btn:active{border-color:var(--lamp)}
+.btn.primary{background:var(--lamp);border-color:var(--lamp);color:#20180C;font-weight:600}
+.btn.quiet{background:none;color:var(--muted);font-size:15px}
+
+/* ---- review card ---- */
+.card{
+  background:var(--ink-2);border:1px solid var(--ink-3);
+  border-radius:var(--radius);
+  padding:26px 22px;margin-bottom:16px;min-height:170px;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.front{font-size:22px;line-height:1.4;white-space:pre-wrap}
+.back{
+  border-top:1px solid var(--ink-3);
+  margin-top:20px;padding-top:18px;
+  font-size:17px;white-space:pre-wrap;color:#DDD5C6;
+}
+.back.hidden{display:none}
+.meta{
+  display:flex;align-items:center;gap:12px;
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+  letter-spacing:.06em;color:var(--muted);margin-bottom:12px;
+}
+
+/* signature: the rung ladder, drawn as the interval it buys you */
+.rungs{display:flex;gap:4px;align-items:center;margin-left:auto}
+.rung{width:6px;height:6px;border-radius:50%;background:var(--ink-3)}
+.rung.on{background:var(--lamp)}
+.rung.here{width:8px;height:8px;background:var(--lamp);box-shadow:0 0 0 3px rgba(226,162,76,.16)}
+
+.grades{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.grade{
+  border:1px solid var(--ink-3);background:var(--ink-2);
+  border-radius:var(--radius);padding:13px 8px;cursor:pointer;
+  color:var(--vellum);font-family:'Spectral',serif;font-size:16px;
+}
+.grade small{
+  display:block;font-family:'IBM Plex Mono',monospace;
+  font-size:10px;letter-spacing:.06em;color:var(--muted);margin-top:3px;
+}
+.grade.again{border-color:rgba(201,123,123,.4)}
+.grade.easy{border-color:rgba(127,169,140,.4)}
+.grade:active{background:var(--ink-3)}
+
+/* ---- forms ---- */
+label{
+  display:block;font-family:'IBM Plex Mono',monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin:16px 0 6px;
+}
+input,select,textarea{
+  width:100%;background:var(--ink-2);color:var(--vellum);
+  border:1px solid var(--ink-3);border-radius:10px;
+  padding:12px;font-family:'Spectral',serif;font-size:16px;
+}
+textarea{min-height:96px;resize:vertical;line-height:1.5}
+textarea.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px}
+input:focus,select:focus,textarea:focus,button:focus-visible{
+  outline:2px solid var(--lamp);outline-offset:1px;border-color:transparent;
+}
+
+/* ---- misc ---- */
+.screen{display:none}
+.screen.on{display:block}
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+  background:var(--vellum);color:var(--ink);
+  padding:11px 18px;border-radius:999px;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;
+  max-width:88vw;text-align:center;
+}
+.toast.show{opacity:1}
+.empty{
+  border:1px dashed var(--ink-3);border-radius:var(--radius);
+  padding:26px 20px;text-align:center;color:var(--muted);
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="bar">
+    <span class="mark">Memory Deck</span>
+    <span class="clock" id="clock"></span>
+    <button class="iconbtn" id="gear" aria-label="Settings">SET</button>
+  </div>
+
+  <!-- ============================================ HOME -->
+  <section class="screen on" id="s-home">
+    <p class="eyebrow" id="home-eyebrow">Decks</p>
+    <div id="decklist"></div>
+    <button class="btn primary" id="go-all">Review everything due</button>
+    <button class="btn" id="go-new">Write a card</button>
+    <button class="btn quiet" id="go-voice">Hand off to Claude</button>
+  </section>
+
+  <!-- ============================================ REVIEW -->
+  <section class="screen" id="s-review">
+    <p class="eyebrow" id="rev-eyebrow"></p>
+    <div class="card">
+      <div class="meta">
+        <span id="rev-id"></span>
+        <span id="rev-deck"></span>
+        <span class="rungs" id="rev-rungs" title="Rung on the ladder"></span>
+      </div>
+      <div class="front" id="rev-front"></div>
+      <div class="back hidden" id="rev-back"></div>
+    </div>
+
+    <button class="btn primary" id="reveal">Show the rest</button>
+
+    <div class="grades hidden" id="grades">
+      <button class="grade again" data-r="again">Again now<small>stays in tonight</small></button>
+      <button class="grade" data-r="fuzzy">Fuzzy<small id="lbl-fuzzy"></small></button>
+      <button class="grade" data-r="got_it">Got it<small id="lbl-got"></small></button>
+      <button class="grade easy" data-r="easy">Easy<small id="lbl-easy"></small></button>
+    </div>
+
+    <button class="btn quiet" id="rev-quit">Save and stop</button>
+  </section>
+
+  <!-- ============================================ NEW CARD -->
+  <section class="screen" id="s-new">
+    <h2>Tonight's memory</h2>
+    <p class="note">One good thing from today. Short on the front, the details on the back.</p>
+    <label for="n-deck">Deck</label>
+    <select id="n-deck"></select>
+    <input id="n-deck-new" placeholder="…or name a new deck" style="margin-top:8px">
+    <label for="n-front">Front</label>
+    <textarea id="n-front" placeholder="Book club — The Things They Carried"></textarea>
+    <label for="n-back">Back</label>
+    <textarea id="n-back" placeholder="Sat outside. Jason talked about his divorce."></textarea>
+    <button class="btn primary" id="n-save" style="margin-top:18px">Save the card</button>
+    <button class="btn quiet" id="n-back-btn">Back to decks</button>
+  </section>
+
+  <!-- ============================================ VOICE -->
+  <section class="screen" id="s-voice">
+    <h2>Hand off to Claude</h2>
+    <p class="note">Copy one batch, paste it into Claude, run that batch by voice. Small batches paste as text; long ones arrive as an attachment and get skimmed.</p>
+
+    <label for="v-deck">Deck</label>
+    <select id="v-deck"></select>
+
+    <label for="v-size">Cards per batch</label>
+    <select id="v-size">
+      <option>5</option><option>6</option><option selected>8</option>
+      <option>10</option><option>12</option><option>15</option>
+    </select>
+
+    <div class="meta" id="v-status" style="margin-top:16px"></div>
+    <button class="btn primary" id="v-copy">Copy this batch</button>
+    <div class="grades">
+      <button class="grade" id="v-prev">Previous</button>
+      <button class="grade" id="v-next">Next batch</button>
+    </div>
+    <textarea class="mono" id="v-payload" readonly style="min-height:120px;margin-top:10px"></textarea>
+
+    <label for="v-return">Paste Claude's results</label>
+    <textarea class="mono" id="v-return" placeholder="#REVIEW&#10;c0142 | got_it&#10;#END"></textarea>
+    <p class="note">You can run several batches first and paste all their results here together.</p>
+    <button class="btn primary" id="v-apply">Record these reviews</button>
+    <button class="btn quiet" id="v-back">Back to decks</button>
+  </section>
+
+  <!-- ============================================ SETTINGS -->
+  <section class="screen" id="s-settings">
+    <h2>Settings</h2>
+    <label for="c-url">Apps Script web app URL</label>
+    <input id="c-url" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <label for="c-token">Token</label>
+    <input id="c-token" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <label for="c-deck">Deck to open on</label>
+    <select id="c-deck"></select>
+    <button class="btn primary" id="c-save" style="margin-top:18px">Save settings</button>
+    <button class="btn quiet" id="c-back">Back to decks</button>
+
+    <label for="c-log" style="margin-top:26px">Diagnostics</label>
+    <button class="btn" id="c-test">Test the connection</button>
+    <textarea class="mono" id="c-log" readonly style="min-height:180px" placeholder="Nothing logged yet."></textarea>
+    <button class="btn quiet" id="c-copylog">Copy the log</button>
+    <p class="note" id="c-ladder"></p>
+  </section>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+'use strict';
+
+/* ------------------------------------------------------------- config */
+
+var store = (function () {
+  var mem = {};
+  try {
+    localStorage.setItem('__t', '1'); localStorage.removeItem('__t');
+    return {
+      get: function (k) { return localStorage.getItem('memdeck.' + k) || ''; },
+      set: function (k, v) { localStorage.setItem('memdeck.' + k, v); }
+    };
+  } catch (e) {
+    return {
+      get: function (k) { return mem[k] || ''; },
+      set: function (k, v) { mem[k] = v; }
+    };
+  }
+})();
+
+var S = {
+  session: 0, today: '',
+  ladder: [1, 3, 7, 14, 30, 60, 120, 240],
+  decks: [], due: [], overflow: [],
+  queue: [], seen: 0, results: {}, order: [],
+  usingOverflow: false, offered: false
+};
+
+var $ = function (id) { return document.getElementById(id); };
+
+/* ---------------------------------------------------------------- log */
+
+var LOG = [];
+
+function log(msg) {
+  var t = new Date().toISOString().slice(11, 19);
+  LOG.push(t + '  ' + msg);
+  if (LOG.length > 120) LOG.shift();
+  var el = $('c-log');
+  if (el) { el.value = LOG.join('\n'); el.scrollTop = el.scrollHeight; }
+  if (window.console && console.log) console.log('[memdeck]', msg);
+}
+
+function redact(s) {
+  var tok = store.get('token');
+  if (tok && tok.length > 4) s = s.split(tok).join('«token»');
+  return s;
+}
+
+log('origin ' + (location.origin || 'null') + ' · protocol ' + location.protocol);
+if (location.protocol === 'file:') {
+  log('WARNING: opened as a local file. The browser blocks network calls from');
+  log('  file:// pages. Host it (GitHub Pages) and open the https address.');
+}
+
+function toast(msg) {
+  var t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function () { t.classList.remove('show'); }, 2200);
+}
+
+function show(name) {
+  ['home', 'review', 'new', 'voice', 'settings'].forEach(function (n) {
+    $('s-' + n).classList.toggle('on', n === name);
+  });
+  window.scrollTo(0, 0);
+}
+
+/* ---------------------------------------------------------------- api */
+
+function api(action, params, isPost) {
+  var url = store.get('url'), token = store.get('token');
+
+  if (!url) return Promise.reject(new Error('Add your web app URL in Settings.'));
+
+  // Catch the paste mistakes before they turn into a vague network error.
+  if (!/^https:\/\//.test(url)) {
+    log('BAD URL: does not start with https://');
+    return Promise.reject(new Error('The URL must start with https://'));
+  }
+  if (url.indexOf('?') > -1) {
+    log('BAD URL: contains a "?" — paste only the part ending in /exec');
+    return Promise.reject(new Error('Trim the URL back to /exec, with no ? after it.'));
+  }
+  if (!/\/exec$/.test(url)) {
+    log('BAD URL: ends with "' + url.slice(-6) + '", expected /exec');
+    return Promise.reject(new Error('The URL should end in /exec.'));
+  }
+  if (!token) {
+    log('BAD TOKEN: empty');
+    return Promise.reject(new Error('Add your token in Settings.'));
+  }
+  if (/^\s|\s$/.test(store.get('token'))) log('NOTE: token has whitespace at an end.');
+
+  var opts, target;
+
+  if (isPost) {
+    var body = Object.assign({ action: action, token: token }, params || {});
+    target = url;
+    opts = {
+      method: 'POST',
+      // text/plain keeps the browser from sending a preflight Apps Script won't answer
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    };
+    log('POST ' + action + ' · ' + opts.body.length + ' bytes');
+  } else {
+    var q = ['action=' + encodeURIComponent(action), 'token=' + encodeURIComponent(token)];
+    Object.keys(params || {}).forEach(function (k) {
+      q.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+    });
+    target = url + '?' + q.join('&');
+    opts = { method: 'GET' };
+    log('GET ' + redact(target));
+  }
+
+  var t0 = Date.now();
+
+  return fetch(target, opts).then(function (r) {
+    log('  ← HTTP ' + r.status + ' ' + (r.statusText || '') +
+        ' · type ' + r.type + ' · ' + (Date.now() - t0) + 'ms');
+    if (r.redirected) log('  followed a redirect to ' + new URL(r.url).host);
+    return readJson(r);
+  }, function (err) {
+    // fetch rejects before any response: CORS, DNS, offline, blocked origin.
+    log('  ← FAILED before any response: ' + err.name + ' — ' + err.message);
+    log('  This is almost always CORS or a login redirect, not a bad token.');
+    log('  Check: deployment "Who has access" is Anyone (not Anyone with a');
+    log('  Google account), and you deployed a NEW version after editing.');
+    throw new Error('Could not reach the backend. See Diagnostics in Settings.');
+  });
+}
+
+function readJson(r) {
+  return r.text().then(function (txt) {
+    var d;
+    try {
+      d = JSON.parse(txt);
+    } catch (e) {
+      var head = txt.slice(0, 160).replace(/\s+/g, ' ');
+      log('  ← not JSON. First 160 chars: ' + head);
+      if (/<!DOCTYPE|<html/i.test(txt)) {
+        log('  That is an HTML page. Usually Google asking you to sign in,');
+        log('  which means the deployment is not open to Anyone.');
+      }
+      throw new Error('The backend sent a web page, not data. See Diagnostics.');
+    }
+    if (!d.ok) {
+      log('  ← backend said no: ' + d.error);
+      throw new Error(d.error || 'The backend refused that.');
+    }
+    log('  ← ok · session ' + d.session +
+        (d.due ? ' · ' + d.due.length + ' due' : '') +
+        (typeof d.applied === 'number' ? ' · applied ' + d.applied : ''));
+    return d;
+  });
+}
+
+function load(bump) {
+  return api('state', bump ? { bump: '1' } : {}, false).then(function (d) {
+    S.session = d.session; S.today = d.today;
+    S.ladder = d.ladder || S.ladder;
+    S.decks = d.decks || []; S.due = d.due || []; S.overflow = d.overflow || [];
+    renderHome();
+    return d;
+  });
+}
+
+/* --------------------------------------------------------------- home */
+
+function renderHome() {
+  $('clock').innerHTML = 'session <b>' + S.session + '</b><br>' + S.today;
+
+  var totalDue = S.due.length, totalOver = S.overflow.length;
+  $('home-eyebrow').textContent = totalDue
+    ? totalDue + ' due' + (totalOver ? ' · ' + totalOver + ' waiting on the calendar' : '')
+    : (totalOver ? 'Nothing due · ' + totalOver + ' waiting on the calendar' : 'Nothing due');
+
+  var list = $('decklist');
+  list.innerHTML = '';
+
+  if (!S.decks.length) {
+    list.innerHTML = '<div class="empty">No decks yet. Write your first card and one appears.</div>';
+  }
+
+  S.decks.forEach(function (d) {
+    var b = document.createElement('button');
+    b.className = 'deck';
+    b.innerHTML = '<span class="deck-name"></span>' +
+      (d.overflow ? '<span class="count over">+' + d.overflow + '</span>' : '') +
+      '<span class="count' + (d.due ? '' : ' zero') + '">' + d.due + '</span>';
+    b.querySelector('.deck-name').textContent = d.deck;
+    b.onclick = function () { startReview(d.deck); };
+    list.appendChild(b);
+  });
+
+  var sel = [$('n-deck'), $('c-deck')];
+  var names = S.decks.map(function (d) { return d.deck; });
+  if (!names.length) names = ['journal'];
+  sel.forEach(function (el) {
+    var keep = el.value;
+    el.innerHTML = '';
+    names.forEach(function (n) {
+      var o = document.createElement('option');
+      o.value = n; o.textContent = n;
+      el.appendChild(o);
+    });
+    if (names.indexOf(keep) > -1) el.value = keep;
+  });
+  var def = store.get('deck');
+  if (def && names.indexOf(def) > -1) { $('n-deck').value = def; $('c-deck').value = def; }
+}
+
+/* ------------------------------------------------------------- review */
+
+function startReview(deck) {
+  var pool = deck ? S.due.filter(function (c) { return c.deck === deck; }) : S.due.slice();
+  S.queue = pool;
+  S.seen = 0; S.results = {}; S.order = [];
+  S.usingOverflow = false; S.offered = false;
+  S.deckFilter = deck || null;
+
+  if (!S.queue.length) {
+    if (offerOverflow()) return;
+    toast('Nothing due in that deck.');
+    return;
+  }
+  show('review');
+  renderCard();
+}
+
+function offerOverflow() {
+  if (S.offered) return false;
+  S.offered = true;
+  var pool = S.deckFilter
+    ? S.overflow.filter(function (c) { return c.deck === S.deckFilter; })
+    : S.overflow.slice();
+  if (!pool.length) return false;
+
+  var msg = "You're through what the session clock owes you. " + pool.length +
+            ' card' + (pool.length === 1 ? ' is' : 's are') +
+            ' also past due by the calendar. Go on?';
+  if (!confirm(msg)) return false;
+
+  S.queue = pool;
+  S.usingOverflow = true;
+  show('review');
+  renderCard();
+  return true;
+}
+
+function renderCard() {
+  var c = S.queue[0];
+  $('rev-eyebrow').textContent = (S.usingOverflow ? 'Calendar overflow · ' : '') +
+    S.queue.length + ' to go';
+  $('rev-id').textContent = c.id;
+  $('rev-deck').textContent = c.deck;
+  $('rev-front').textContent = c.front;
+  $('rev-back').textContent = c.back || '(nothing on the back)';
+  $('rev-back').classList.add('hidden');
+  $('reveal').classList.remove('hidden');
+  $('grades').classList.add('hidden');
+
+  var r = $('rev-rungs');
+  r.innerHTML = '';
+  S.ladder.forEach(function (_, i) {
+    var d = document.createElement('span');
+    d.className = 'rung' + (i < c.rung ? ' on' : i === c.rung ? ' here' : '');
+    r.appendChild(d);
+  });
+
+  var at = function (n) {
+    var i = Math.max(0, Math.min(S.ladder.length - 1, n));
+    return S.ladder[i] + 'd';
+  };
+  $('lbl-fuzzy').textContent = at(c.rung - 1);
+  $('lbl-got').textContent = at(c.rung + 1);
+  $('lbl-easy').textContent = at(c.rung + 2);
+}
+
+$('reveal').onclick = function () {
+  $('rev-back').classList.remove('hidden');
+  this.classList.add('hidden');
+  $('grades').classList.remove('hidden');
+};
+
+Array.prototype.forEach.call(document.querySelectorAll('.grade'), function (b) {
+  b.onclick = function () { grade(b.getAttribute('data-r')); };
+});
+
+function grade(result) {
+  var c = S.queue.shift();
+  if (!S.results[c.id]) S.order.push(c.id);
+  S.results[c.id] = result;
+
+  if (result === 'again') {
+    S.queue.push(c);           // back into tonight's pile
+  }
+
+  if (S.queue.length) { renderCard(); return; }
+  if (!S.usingOverflow && offerOverflow()) return;
+  finishReview();
+}
+
+$('rev-quit').onclick = function () { finishReview(); };
+
+function finishReview() {
+  var reviews = S.order.map(function (id) { return { id: id, result: S.results[id] }; });
+  if (!reviews.length) { show('home'); return; }
+
+  toast('Saving…');
+  api('applyReviews', { reviews: reviews }, true)
+    .then(function (d) {
+      toast('Recorded ' + d.applied + ' card' + (d.applied === 1 ? '' : 's') + '.');
+      return load(false);
+    })
+    .then(function () { show('home'); })
+    .catch(function (e) { toast(e.message); });
+}
+
+/* ----------------------------------------------------------- new card */
+
+$('go-new').onclick = function () { show('new'); };
+$('n-back-btn').onclick = function () { show('home'); };
+
+$('n-save').onclick = function () {
+  var deck = ($('n-deck-new').value || '').trim() || $('n-deck').value;
+  var front = $('n-front').value.trim();
+  var back = $('n-back').value.trim();
+  if (!front) { toast('The front is empty.'); return; }
+
+  api('addCard', { deck: deck, front: front, back: back }, true)
+    .then(function (d) {
+      $('n-front').value = ''; $('n-back').value = ''; $('n-deck-new').value = '';
+      toast('Saved as ' + d.id + '. Back tomorrow.');
+      return load(false);
+    })
+    .then(function () { show('home'); })
+    .catch(function (e) { toast(e.message); });
+};
+
+/* -------------------------------------------------------------- voice */
+
+var V = { batch: 0 };
+
+$('go-voice').onclick = function () {
+  if (!S.due.length && !S.overflow.length) { toast('Nothing due to hand off.'); return; }
+
+  var sel = $('v-deck');
+  var decks = S.decks.filter(function (d) { return d.due || d.overflow; })
+                     .map(function (d) { return d.deck; });
+  sel.innerHTML = '<option value="">Everything due</option>';
+  decks.forEach(function (n) {
+    var o = document.createElement('option');
+    o.value = n; o.textContent = n;
+    sel.appendChild(o);
+  });
+  V.batch = 0;
+  $('v-return').value = '';
+  rebuildBatch();
+  show('voice');
+};
+
+function voicePool() {
+  var deck = $('v-deck').value;
+  var pool = S.due.concat(S.overflow);
+  return deck ? pool.filter(function (c) { return c.deck === deck; }) : pool;
+}
+
+function rebuildBatch() {
+  var pool = voicePool();
+  var size = parseInt($('v-size').value, 10);
+  var total = Math.max(1, Math.ceil(pool.length / size));
+  if (V.batch >= total) V.batch = total - 1;
+  if (V.batch < 0) V.batch = 0;
+
+  var slice = pool.slice(V.batch * size, V.batch * size + size);
+  var text = buildPayload(slice);
+  $('v-payload').value = text;
+
+  var n = text.length;
+  var warn = n > 1800 ? '  ·  long, may arrive as a file' : '';
+  $('v-status').textContent =
+    'batch ' + (V.batch + 1) + ' of ' + total +
+    '  ·  ' + slice.length + ' cards  ·  ' + n + ' chars' + warn;
+  $('v-status').style.color = n > 1800 ? 'var(--rose)' : 'var(--muted)';
+}
+
+$('v-deck').onchange = function () { V.batch = 0; rebuildBatch(); };
+$('v-size').onchange = function () { V.batch = 0; rebuildBatch(); };
+$('v-prev').onclick = function () { V.batch--; rebuildBatch(); };
+$('v-next').onclick = function () { V.batch++; rebuildBatch(); };
+
+function buildPayload(cards) {
+  // Kept deliberately terse: the iPhone Claude app turns a long paste into an
+  // attachment, and attachments get skimmed rather than worked through.
+  var head =
+    'Quiz me on these, one at a time, by voice. Read the front, wait for my ' +
+    'answer, then read the back and ask how it went. My options are: again ' +
+    '(ask me again later in this run), fuzzy, got it, easy. At the end print ' +
+    'only:\n#REVIEW\nc0000 | got_it\n#END\nusing one line per card, result as ' +
+    'again / fuzzy / got_it / easy.\n\n';
+
+  var body = cards.map(function (c) {
+    var f = c.front.replace(/\s+/g, ' ').trim();
+    var b = (c.back || '').replace(/\s+/g, ' ').trim();
+    return c.id + ' | ' + f + (b ? ' >> ' + b : '');
+  }).join('\n');
+
+  return head + body;
+}
+
+$('v-copy').onclick = function () {
+  var ta = $('v-payload');
+  var done = function () {
+    toast('Copied. Open Claude and paste.');
+    var pool = voicePool(), size = parseInt($('v-size').value, 10);
+    if ((V.batch + 1) * size < pool.length) { V.batch++; rebuildBatch(); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done, fallback);
+  } else { fallback(); }
+  function fallback() {
+    ta.removeAttribute('readonly');
+    ta.select(); ta.setSelectionRange(0, 999999);
+    try { document.execCommand('copy'); done(); }
+    catch (e) { toast('Select the text and copy it by hand.'); }
+    ta.setAttribute('readonly', 'readonly');
+  }
+};
+
+$('v-apply').onclick = function () {
+  var reviews = parseReturn($('v-return').value);
+  if (!reviews.length) { toast('No #REVIEW lines found in that.'); return; }
+
+  toast('Saving…');
+  api('applyReviews', { reviews: reviews }, true)
+    .then(function (d) {
+      var msg = 'Recorded ' + d.applied + ' card' + (d.applied === 1 ? '' : 's') + '.';
+      if (d.missing && d.missing.length) msg += ' ' + d.missing.length + ' id not found.';
+      toast(msg);
+      $('v-return').value = '';
+      return load(false);
+    })
+    .then(function () { show('home'); })
+    .catch(function (e) { toast(e.message); });
+};
+
+function parseReturn(text) {
+  var out = [], on = false;
+  var ok = { again: 1, fuzzy: 1, got_it: 1, easy: 1 };
+  text.split('\n').forEach(function (raw) {
+    var line = raw.trim();
+    if (/^#REVIEW/i.test(line)) { on = true; return; }
+    if (/^#END/i.test(line)) { on = false; return; }
+    if (!on || !line) return;
+    var p = line.split('|');
+    if (p.length < 2) return;
+    var id = p[0].trim();
+    var res = p[1].trim().toLowerCase().replace(/[\s-]+/g, '_');
+    if (res === 'again_now') res = 'again';
+    if (res === 'gotit') res = 'got_it';
+    if (id && ok[res]) out.push({ id: id, result: res });
+  });
+  return out;
+}
+
+$('v-back').onclick = function () { show('home'); };
+
+/* ----------------------------------------------------------- settings */
+
+$('gear').onclick = function () {
+  $('c-url').value = store.get('url');
+  $('c-token').value = store.get('token');
+  $('c-ladder').textContent = 'Ladder: ' + S.ladder.join(' · ') + ' days. ' +
+    'A card moves one step at a time from wherever it already sits.';
+  $('c-log').value = LOG.join('\n');
+  show('settings');
+};
+
+$('c-save').onclick = function () {
+  store.set('url', $('c-url').value.trim());
+  store.set('token', $('c-token').value.trim());
+  store.set('deck', $('c-deck').value);
+  toast('Saved.');
+  load(true).then(function () { show('home'); }).catch(function (e) { toast(e.message); });
+};
+
+$('c-back').onclick = function () { show('home'); };
+$('go-all').onclick = function () { startReview(null); };
+
+$('c-test').onclick = function () {
+  // Test what is typed in the boxes right now, not what was last saved.
+  store.set('url', $('c-url').value.trim());
+  store.set('token', $('c-token').value.trim());
+
+  LOG = [];
+  log('--- test run ---');
+  log('page ' + location.protocol + '//' + location.host);
+  log('url  ' + store.get('url'));
+  log('token ' + store.get('token').length + ' chars');
+
+  api('state', {}, false)
+    .then(function (d) {
+      log('SUCCESS. Backend is reachable and the token matched.');
+      log('decks: ' + (d.decks.length ? d.decks.map(function (x) { return x.deck; }).join(', ') : 'none yet'));
+      toast('Connected.');
+    })
+    .catch(function (e) { log('RESULT: ' + e.message); toast(e.message); });
+};
+
+$('c-copylog').onclick = function () {
+  var ta = $('c-log');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(function () { toast('Log copied.'); });
+  } else {
+    ta.removeAttribute('readonly'); ta.select();
+    try { document.execCommand('copy'); toast('Log copied.'); } catch (e) { toast('Select and copy by hand.'); }
+    ta.setAttribute('readonly', 'readonly');
+  }
+};
+
+/* --------------------------------------------------------------- boot */
+
+if (!store.get('url')) {
+  $('gear').click();
+  toast('Add your web app URL to begin.');
+} else {
+  load(true).catch(function (e) { toast(e.message); });
+}
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#13131C">
+<title>Memory Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Spectral:ital,wght@0,300;0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#13131C;
+  --ink-2:#1B1B27;
+  --ink-3:#282634;
+  --vellum:#EDE6D8;
+  --muted:#8B879B;
+  --lamp:#E2A24C;
+  --sage:#7FA98C;
+  --rose:#C97B7B;
+  --pad:20px;
+  --radius:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ink);
+  color:var(--vellum);
+  font-family:'Spectral',Georgia,serif;
+  font-weight:300;
+  font-size:17px;
+  line-height:1.55;
+  min-height:100vh;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.wrap{max-width:520px;margin:0 auto;padding:0 var(--pad) 48px}
+
+/* ---- chrome ---- */
+.bar{
+  display:flex;align-items:baseline;gap:12px;
+  padding:calc(env(safe-area-inset-top) + 18px) 0 14px;
+  border-bottom:1px solid var(--ink-3);
+  margin-bottom:22px;
+}
+.mark{
+  font-family:'Instrument Serif',Georgia,serif;
+  font-size:25px;line-height:1;letter-spacing:.01em;
+}
+.clock{
+  margin-left:auto;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.06em;color:var(--muted);
+  text-align:right;white-space:nowrap;
+}
+.clock b{color:var(--lamp);font-weight:500}
+.iconbtn{
+  background:none;border:0;color:var(--muted);
+  font-family:'IBM Plex Mono',monospace;font-size:11px;
+  letter-spacing:.08em;padding:6px 2px;cursor:pointer;
+}
+.iconbtn:hover{color:var(--vellum)}
+
+/* ---- type ---- */
+h2{
+  font-family:'Instrument Serif',Georgia,serif;
+  font-weight:400;font-size:27px;line-height:1.15;
+  margin:0 0 4px;
+}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 14px;
+}
+.note{color:var(--muted);font-size:14.5px;margin:10px 0 0}
+
+/* ---- decks ---- */
+.deck{
+  display:flex;align-items:center;gap:14px;width:100%;
+  background:var(--ink-2);border:1px solid var(--ink-3);
+  border-radius:var(--radius);
+  padding:16px 18px;margin-bottom:10px;
+  color:var(--vellum);text-align:left;cursor:pointer;
+  font-family:inherit;font-size:18px;
+}
+.deck:active{border-color:var(--lamp)}
+.deck-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.count{
+  font-family:'IBM Plex Mono',monospace;font-size:13px;
+  color:var(--lamp);min-width:26px;text-align:right;
+}
+.syncdot{font-size:10px;letter-spacing:.09em;text-transform:uppercase;opacity:.65;
+      padding:2px 7px;border:1px solid var(--line);border-radius:99px;white-space:nowrap}
+    .syncdot.ok{opacity:.4}
+    .syncdot.pending{color:var(--lamp);border-color:var(--lamp);opacity:.9}
+    .count.zero{color:var(--ink-3)}
+.count.over{color:var(--muted);font-size:11px}
+
+/* ---- buttons ---- */
+.btn{
+  display:block;width:100%;
+  background:var(--ink-2);border:1px solid var(--ink-3);
+  border-radius:var(--radius);
+  color:var(--vellum);font-family:'Spectral',serif;font-size:17px;
+  padding:15px;margin-bottom:10px;cursor:pointer;
+}
+.btn:active{border-color:var(--lamp)}
+.btn.primary{background:var(--lamp);border-color:var(--lamp);color:#20180C;font-weight:600}
+.btn.quiet{background:none;color:var(--muted);font-size:15px}
+
+/* ---- review card ---- */
+.card{
+  background:var(--ink-2);border:1px solid var(--ink-3);
+  border-radius:var(--radius);
+  padding:26px 22px;margin-bottom:16px;min-height:170px;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.front{font-size:22px;line-height:1.4;white-space:pre-wrap}
+.back{
+  border-top:1px solid var(--ink-3);
+  margin-top:20px;padding-top:18px;
+  font-size:17px;white-space:pre-wrap;color:#DDD5C6;
+}
+.back.hidden{display:none}
+.meta{
+  display:flex;align-items:center;gap:12px;
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+  letter-spacing:.06em;color:var(--muted);margin-bottom:12px;
+}
+
+/* signature: the rung ladder, drawn as the interval it buys you */
+.rungs{display:flex;gap:4px;align-items:center;margin-left:auto}
+.rung{width:6px;height:6px;border-radius:50%;background:var(--ink-3)}
+.rung.on{background:var(--lamp)}
+.rung.here{width:8px;height:8px;background:var(--lamp);box-shadow:0 0 0 3px rgba(226,162,76,.16)}
+
+.grades{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.grade{
+  border:1px solid var(--ink-3);background:var(--ink-2);
+  border-radius:var(--radius);padding:13px 8px;cursor:pointer;
+  color:var(--vellum);font-family:'Spectral',serif;font-size:16px;
+}
+.grade small{
+  display:block;font-family:'IBM Plex Mono',monospace;
+  font-size:10px;letter-spacing:.06em;color:var(--muted);margin-top:3px;
+}
+.grade.again{border-color:rgba(201,123,123,.4)}
+.grade.easy{border-color:rgba(127,169,140,.4)}
+.grade:active{background:var(--ink-3)}
+
+/* ---- forms ---- */
+label{
+  display:block;font-family:'IBM Plex Mono',monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin:16px 0 6px;
+}
+input,select,textarea{
+  width:100%;background:var(--ink-2);color:var(--vellum);
+  border:1px solid var(--ink-3);border-radius:10px;
+  padding:12px;font-family:'Spectral',serif;font-size:16px;
+}
+textarea{min-height:96px;resize:vertical;line-height:1.5}
+textarea.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px}
+input:focus,select:focus,textarea:focus,button:focus-visible{
+  outline:2px solid var(--lamp);outline-offset:1px;border-color:transparent;
+}
+
+/* ---- misc ---- */
+.screen{display:none}
+.screen.on{display:block}
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+  background:var(--vellum);color:var(--ink);
+  padding:11px 18px;border-radius:999px;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;
+  max-width:88vw;text-align:center;
+}
+.toast.show{opacity:1}
+.empty{
+  border:1px dashed var(--ink-3);border-radius:var(--radius);
+  padding:26px 20px;text-align:center;color:var(--muted);
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="bar">
+    <button class="iconbtn hidden" id="home-btn" aria-label="Back to decks">&lsaquo;</button>
+    <span class="mark">Memory Deck</span>
+    <span class="clock" id="clock"></span>
+    <span class="syncdot" id="sync-state"></span>
+    <button class="iconbtn" id="gear" aria-label="Settings">SET</button>
+  </div>
+
+  <!-- ============================================ HOME -->
+  <section class="screen on" id="s-home">
+    <p class="eyebrow" id="home-eyebrow">Decks</p>
+    <div id="decklist"></div>
+    <button class="btn primary" id="go-all">Review across all decks</button>
+    <button class="btn" id="go-new">Write a card</button>
+    <button class="btn quiet" id="go-voice">Hand off to Claude</button>
+  </section>
+
+  <!-- ============================================ REVIEW -->
+  <section class="screen" id="s-review">
+    <p class="eyebrow" id="rev-eyebrow"></p>
+    <div class="card">
+      <div class="meta">
+        <span id="rev-id"></span>
+        <span id="rev-deck"></span>
+        <span class="rungs" id="rev-rungs" title="Rung on the ladder"></span>
+      </div>
+      <div class="front" id="rev-front"></div>
+      <div class="back hidden" id="rev-back"></div>
+    </div>
+
+    <button class="btn primary" id="reveal">Show the rest</button>
+
+    <div class="grades hidden" id="grades">
+      <button class="grade again" data-r="again">Again now<small>stays in tonight</small></button>
+      <button class="grade" data-r="fuzzy">Fuzzy<small id="lbl-fuzzy"></small></button>
+      <button class="grade" data-r="got_it">Got it<small id="lbl-got"></small></button>
+      <button class="grade easy" data-r="easy">Easy<small id="lbl-easy"></small></button>
+    </div>
+
+    <button class="btn quiet" id="rev-quit">Save and stop</button>
+  </section>
+
+  <!-- ============================================ DECK LAUNCHER -->
+  <section class="screen" id="s-start">
+    <p class="eyebrow" id="st-eyebrow"></p>
+    <h2>How many tonight?</h2>
+    <p class="note" id="st-counts"></p>
+    <label for="st-n">Cards</label>
+    <input id="st-n" type="number" inputmode="numeric" min="1" max="200" value="10">
+    <div class="grades" id="st-quick" style="margin-top:10px"></div>
+    <button class="btn primary" id="st-go" style="margin-top:18px">Start reviewing</button>
+    <button class="btn" id="st-voice">Hand these to Claude</button>
+    <button class="btn quiet" id="st-back">Back to decks</button>
+  </section>
+
+  <!-- ============================================ NEW CARD -->
+  <section class="screen" id="s-new">
+    <h2>Tonight's memory</h2>
+    <p class="note">One good thing from today. Short on the front, the details on the back.</p>
+    <label for="n-deck">Deck</label>
+    <select id="n-deck"></select>
+    <input id="n-deck-new" placeholder="…or name a new deck" style="margin-top:8px">
+    <label for="n-front">Front</label>
+    <textarea id="n-front" placeholder="Book club — The Things They Carried"></textarea>
+    <label for="n-back">Back</label>
+    <textarea id="n-back" placeholder="Sat outside. Jason talked about his divorce."></textarea>
+    <button class="btn primary" id="n-save" style="margin-top:18px">Save the card</button>
+    <button class="btn quiet" id="n-back-btn">Back to decks</button>
+  </section>
+
+  <!-- ============================================ VOICE -->
+  <section class="screen" id="s-voice">
+    <h2>Hand off to Claude</h2>
+    <p class="note">Pick a deck and a number, copy the block, paste it into Claude, run it by voice. Keep it small — long pastes arrive as an attachment and get skimmed.</p>
+
+    <label for="v-deck">Deck</label>
+    <select id="v-deck"></select>
+
+    <label for="v-n">How many</label>
+    <input id="v-n" type="number" inputmode="numeric" min="1" max="100" value="8">
+
+    <div class="meta" id="v-status" style="margin-top:16px"></div>
+    <button class="btn primary" id="v-copy">Copy the handoff</button>
+    <textarea class="mono" id="v-payload" readonly style="min-height:120px;margin-top:10px"></textarea>
+
+    <label for="v-return">Paste Claude's results</label>
+    <textarea class="mono" id="v-return" placeholder="#REVIEW&#10;c0142 | got_it&#10;#END"></textarea>
+    <p class="note">You can run several rounds and paste all their results here together.</p>
+    <button class="btn primary" id="v-apply">Record these reviews</button>
+    <button class="btn quiet" id="v-back">Back to decks</button>
+  </section>
+
+  <!-- ============================================ SETTINGS -->
+  <section class="screen" id="s-settings">
+    <h2>Settings</h2>
+    <label for="c-url">Apps Script web app URL</label>
+    <input id="c-url" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <label for="c-token">Token</label>
+    <input id="c-token" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <label for="c-deck">Deck to open on</label>
+    <select id="c-deck"></select>
+    <button class="btn primary" id="c-save" style="margin-top:18px">Save settings</button>
+    <button class="btn quiet" id="c-back">Back to decks</button>
+
+    <button class="btn" id="c-sync" style="margin-top:20px">Sync now</button>
+    <p class="note" id="c-mirror"></p>
+    <p class="note" id="c-build"></p>
+    <label for="c-log" style="margin-top:26px">Diagnostics</label>
+    <button class="btn" id="c-test">Test the connection</button>
+    <textarea class="mono" id="c-log" readonly style="min-height:180px" placeholder="Nothing logged yet."></textarea>
+    <button class="btn quiet" id="c-copylog">Copy the log</button>
+    <p class="note" id="c-ladder"></p>
+  </section>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+'use strict';
+
+/* ------------------------------------------------------------- config */
+
+var store = (function () {
+  var mem = {};
+  try {
+    localStorage.setItem('__t', '1'); localStorage.removeItem('__t');
+    return {
+      get: function (k) { return localStorage.getItem('memdeck.' + k) || ''; },
+      set: function (k, v) { localStorage.setItem('memdeck.' + k, v); }
+    };
+  } catch (e) {
+    return {
+      get: function (k) { return mem[k] || ''; },
+      set: function (k, v) { mem[k] = v; }
+    };
+  }
+})();
+
+var API = { everWorked: false, inFlight: false };
+
+var BUILD = '2026-09-02 · local-first';
+
+var S = {
+  session: 0, today: '',
+  ladder: [1, 3, 7, 14, 30, 60, 120, 240],
+  decks: [], due: [], overflow: [],
+  queue: [], seen: 0, results: {}, order: [],
+  startDeck: null
+};
+
+var $ = function (id) { return document.getElementById(id); };
+
+/* ---------------------------------------------------------------- log */
+
+var LOG = [];
+
+function log(msg) {
+  var t = new Date().toISOString().slice(11, 19);
+  LOG.push(t + '  ' + msg);
+  if (LOG.length > 120) LOG.shift();
+  var el = $('c-log');
+  if (el) { el.value = LOG.join('\n'); el.scrollTop = el.scrollHeight; }
+  if (window.console && console.log) console.log('[memdeck]', msg);
+}
+
+function redact(s) {
+  var tok = store.get('token');
+  if (tok && tok.length > 4) s = s.split(tok).join('«token»');
+  return s;
+}
+
+log('origin ' + (location.origin || 'null') + ' · protocol ' + location.protocol);
+if (location.protocol === 'file:') {
+  log('WARNING: opened as a local file. The browser blocks network calls from');
+  log('  file:// pages. Host it (GitHub Pages) and open the https address.');
+}
+
+/** msg only: shows and fades. toast(msg, true): stays until toast() is called again. */
+function toast(msg, hold) {
+  var t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  if (!hold) toast._t = setTimeout(function () { t.classList.remove('show'); }, 2200);
+}
+
+function show(name) {
+  // Derived from the DOM on purpose. This was a hardcoded list once, a new
+  // screen got added to the markup and not to the list, and tapping a deck
+  // turned every screen off and none on.
+  var target = $('s' + '-' + name);
+  Array.prototype.forEach.call(document.querySelectorAll('.screen'), function (el) {
+    el.classList.toggle('on', el === target);
+  });
+  if (!target) log('  ! no screen named ' + name);
+  // Every screen except home gets a back arrow, so nothing can strand you.
+  $('home-btn').classList.toggle('hidden', name === 'home');
+  window.scrollTo(0, 0);
+}
+
+/* ---------------------------------------------------------------- api */
+
+function api(action, params, isPost) {
+  var url = store.get('url'), token = store.get('token');
+
+  if (!url) return Promise.reject(new Error('Add your web app URL in Settings.'));
+
+  // Catch the paste mistakes before they turn into a vague network error.
+  if (!/^https:\/\//.test(url)) {
+    log('BAD URL: does not start with https://');
+    return Promise.reject(new Error('The URL must start with https://'));
+  }
+  if (url.indexOf('?') > -1) {
+    log('BAD URL: contains a "?" — paste only the part ending in /exec');
+    return Promise.reject(new Error('Trim the URL back to /exec, with no ? after it.'));
+  }
+  if (!/\/exec$/.test(url)) {
+    log('BAD URL: ends with "' + url.slice(-6) + '", expected /exec');
+    return Promise.reject(new Error('The URL should end in /exec.'));
+  }
+  if (!token) {
+    log('BAD TOKEN: empty');
+    return Promise.reject(new Error('Add your token in Settings.'));
+  }
+  if (/^\s|\s$/.test(store.get('token'))) log('NOTE: token has whitespace at an end.');
+
+  var opts, target;
+
+  if (isPost) {
+    var body = Object.assign({ action: action, token: token }, params || {});
+    target = url;
+    opts = {
+      method: 'POST',
+      // text/plain keeps the browser from sending a preflight Apps Script won't answer
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    };
+    log('POST ' + action + ' · ' + opts.body.length + ' bytes');
+  } else {
+    var q = ['action=' + encodeURIComponent(action), 'token=' + encodeURIComponent(token)];
+    Object.keys(params || {}).forEach(function (k) {
+      q.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+    });
+    target = url + '?' + q.join('&');
+    opts = { method: 'GET' };
+    log('GET ' + redact(target));
+  }
+
+  var t0 = Date.now();
+
+  // Without this a stalled request hangs until the OS kills it, which on a
+  // sleeping phone looks identical to a network failure minutes later.
+  var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  if (ctl) { opts.signal = ctl.signal; }
+  var timer = setTimeout(function () {
+    if (ctl) ctl.abort();
+  }, 90000);
+
+  return fetch(target, opts).then(function (r) {
+    clearTimeout(timer);
+    log('  ← HTTP ' + r.status + ' ' + (r.statusText || '') +
+        ' · type ' + r.type + ' · ' + (Date.now() - t0) + 'ms');
+    if (r.redirected) log('  followed a redirect to ' + new URL(r.url).host);
+    API.everWorked = true;
+    return readJson(r);
+  }, function (err) {
+    clearTimeout(timer);
+    log('  ← FAILED before any response: ' + err.name + ' — ' + err.message);
+    if (API.everWorked) {
+      // A call already succeeded this session, so the deployment and token are
+      // fine. This is the connection dropping: sleep, timeout, or lost signal.
+      log('  Earlier calls succeeded, so this is NOT CORS or permissions.');
+      log('  The connection dropped — phone slept, signal lost, or it timed out.');
+      log('  Your results are kept. Reopen and press save again; the server');
+      log('  ignores a batch it has already recorded.');
+    } else {
+    log('  No call has succeeded yet this session.');
+    log('  Check: deployment "Who has access" is Anyone (not Anyone with a');
+    log('  Google account), and you deployed a NEW version after editing.');
+    }
+    throw new Error('Could not reach the backend. See Diagnostics in Settings.');
+  });
+}
+
+function readJson(r) {
+  return r.text().then(function (txt) {
+    var d;
+    try {
+      d = JSON.parse(txt);
+    } catch (e) {
+      var head = txt.slice(0, 160).replace(/\s+/g, ' ');
+      log('  ← not JSON. First 160 chars: ' + head);
+      if (/<!DOCTYPE|<html/i.test(txt)) {
+        log('  That is an HTML page. Usually Google asking you to sign in,');
+        log('  which means the deployment is not open to Anyone.');
+      }
+      throw new Error('The backend sent a web page, not data. See Diagnostics.');
+    }
+    if (!d.ok) {
+      log('  ← backend said no: ' + d.error);
+      throw new Error(d.error || 'The backend refused that.');
+    }
+    log('  ← ok' +
+        (d.cards ? ' · ' + d.cards.length + ' cards' : '') +
+        (typeof d.applied === 'number' ? ' · applied ' + d.applied : ''));
+    return d;
+  });
+}
+
+/**
+ * Paint from last night's counts straight away, then correct them from the
+ * server. The numbers are usually right and the screen is up instantly; when
+ * they are wrong they fix themselves a second later.
+ */
+/**
+ * Paint from the local copy at once, then reconcile with the server behind
+ * the screen. If there is no local copy yet this is the one time you wait.
+ */
+function load() {
+  mirrorLoad();
+  if (M) {
+    S.today = todayStr();
+    S.decks = localCounts();
+    renderHome();
+    outboxBadge();
+    syncNow();                       // background; nothing blocks on it
+    return Promise.resolve(true);
+  }
+  toast('First run — fetching your cards…', true);
+  return syncNow({ loud: false }).then(function (ok) {
+    if (ok) toast('Ready.');
+    else toast('Could not reach the backend. Check Settings.');
+    return ok;
+  });
+}
+
+/* --------------------------------------------------------------- home */
+
+function renderHome() {
+  $('clock').innerHTML = S.today;
+
+  var c = countsFor(null);
+  $('home-eyebrow').textContent = c.scheduled
+    ? c.scheduled + ' scheduled'
+    : 'Nothing scheduled · tap a deck to pull ahead';
+
+  var list = $('decklist');
+  list.innerHTML = '';
+
+  if (!S.decks.length) {
+    list.innerHTML = '<div class="empty">No decks yet. Write your first card and one appears.</div>';
+  }
+
+  S.decks.forEach(function (d) {
+    var b = document.createElement('button');
+    b.className = 'deck';
+    b.innerHTML = '<span class="deck-name"></span>' +
+      (d.overflow ? '<span class="count over">+' + d.overflow + '</span>' : '') +
+      '<span class="count' + (d.due ? '' : ' zero') + '">' + (d.due + d.overflow) + '</span>';
+    b.querySelector('.deck-name').textContent = d.deck;
+    b.onclick = function () { openStart(d.deck); };
+    list.appendChild(b);
+  });
+
+  var sel = [$('n-deck'), $('c-deck')];
+  var names = S.decks.map(function (d) { return d.deck; });
+  if (!names.length) names = ['journal'];
+  sel.forEach(function (el) {
+    var keep = el.value;
+    el.innerHTML = '';
+    names.forEach(function (n) {
+      var o = document.createElement('option');
+      o.value = n; o.textContent = n;
+      el.appendChild(o);
+    });
+    if (names.indexOf(keep) > -1) el.value = keep;
+  });
+  var def = store.get('deck');
+  if (def && names.indexOf(def) > -1) { $('n-deck').value = def; $('c-deck').value = def; }
+}
+
+/* ------------------------------------------------------------- review */
+
+/* ------------------------------------------------- the deck launcher */
+
+
+/**
+ * One id per set of results, held until that set is confirmed saved. A retry
+ * after a dropped connection reuses it, and the server ignores a batch it has
+ * already recorded.
+ */
+function batchId(reviews) {
+  var key = reviews.map(function (r) { return r.id + r.result; }).join('');
+  if (batchId._key !== key) {
+    batchId._key = key;
+    batchId._id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  return batchId._id;
+}
+
+/** Guard against the double tap that a slow save invites. */
+function submitting(on, label) {
+  API.inFlight = on;
+  ['grade-save', 'v-apply'].forEach(function (id) {
+    var b = $(id);
+    if (b) { b.disabled = on; b.style.opacity = on ? '.5' : ''; }
+  });
+  if (on && label) toast(label, true);
+}
+
+
+/* ================================================================== mirror
+ *
+ * The phone holds the whole collection and does every bit of scheduling
+ * against that copy. Nothing you do at night waits on the network: opening a
+ * deck, drawing cards, and grading them are all local and instant. Results go
+ * into an outbox and are pushed when there is a connection. The server stays
+ * the source of truth — the next pull overwrites local state — so any drift
+ * between the two ladder implementations heals itself rather than compounding.
+ */
+
+var M = null;          // { pulledAt, today, cards: [], sessions: {} }
+var OUT = [];          // [{ batch, reviews, at }]
+
+function mirrorLoad() {
+  try {
+    var raw = store.get('mirror');
+    M = raw ? JSON.parse(raw) : null;
+  } catch (e) { M = null; }
+  try {
+    OUT = JSON.parse(store.get('outbox') || '[]');
+  } catch (e) { OUT = []; }
+  return M;
+}
+
+function mirrorSave() {
+  try {
+    store.set('mirror', JSON.stringify(M));
+  } catch (e) {
+    // Quota. Drop the mirror rather than wedging the app; the next pull rebuilds it.
+    log('  ! could not store mirror: ' + e.message);
+  }
+}
+
+function outboxSave() { store.set('outbox', JSON.stringify(OUT)); }
+
+function todayStr() {
+  var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+function sessionOf(deck) {
+  var e = M && M.sessions && M.sessions[deck];
+  return e ? Number(e.num) : 1;
+}
+
+function addDays(dateStr, n) {
+  var d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/* ------------------------------------------------------- local scheduling */
+
+function localCounts() {
+  var t = todayStr(), by = {};
+  if (!M) return [];
+  M.cards.forEach(function (c) {
+    if (!by[c.deck]) {
+      by[c.deck] = { deck: c.deck, due: 0, overflow: 0, ahead: 0, total: 0,
+                     session: sessionOf(c.deck) };
+    }
+    var d = by[c.deck];
+    d.total++;
+    if (c.last_reviewed_date === t) d.ahead++;
+    else if (Number(c.due_session) <= d.session) d.due++;
+    else if (c.due_date && c.due_date <= t) d.overflow++;
+    else d.ahead++;
+  });
+  return Object.keys(by).sort().map(function (k) { return by[k]; });
+}
+
+function newestFirst(a, b) {
+  var x = String(a.created_date || ''), y = String(b.created_date || '');
+  if (x !== y) return x < y ? 1 : -1;
+  return String(a.id) < String(b.id) ? 1 : -1;
+}
+
+/** Same ordering the server used to do: due, then overflow, then borrowed. */
+function localDraw(deck, n) {
+  if (!M) return [];
+  var t = todayStr(), due = [], over = [], ahead = [];
+
+  M.cards.forEach(function (c) {
+    if (deck && c.deck !== deck) return;
+    if (c.last_reviewed_date === t) return;        // done today, not again today
+    var s = sessionOf(c.deck);
+    if (Number(c.due_session) <= s) due.push(c);
+    else if (c.due_date && c.due_date <= t) over.push(c);
+    else ahead.push(c);
+  });
+
+  due.sort(newestFirst);
+  over.sort(newestFirst);
+  ahead.sort(function (a, b) {
+    var d = Number(a.due_session) - Number(b.due_session);
+    return d ? d : newestFirst(a, b);
+  });
+
+  return due.concat(over, ahead).slice(0, n).map(function (c) {
+    return {
+      id: c.id, deck: c.deck, front: c.front, back: c.back,
+      rung: c.rung, interval: c.interval, review_count: c.review_count,
+      created_date: c.created_date, due_session: c.due_session,
+      ahead: Number(c.due_session) > sessionOf(c.deck) &&
+             !(c.due_date && c.due_date <= t)
+    };
+  });
+}
+
+/**
+ * Apply grades to the mirror. Must match applyReviews_ in Code.gs; if it ever
+ * drifts, the next pull corrects it, so this is optimistic rather than
+ * authoritative.
+ */
+function localApply(reviews) {
+  if (!M) return;
+  var t = todayStr();
+  var byId = {};
+  M.cards.forEach(function (c) { byId[c.id] = c; });
+
+  var touched = {};
+  reviews.forEach(function (r) { if (byId[r.id]) touched[byId[r.id].deck] = true; });
+
+  // One step per deck per calendar day, and only for decks actually reviewed.
+  M.sessions = M.sessions || {};
+  Object.keys(touched).forEach(function (deck) {
+    var cur = M.sessions[deck];
+    if (cur && cur.date === t) return;
+    M.sessions[deck] = { num: cur ? Number(cur.num) + 1 : 1, date: t };
+  });
+
+  reviews.forEach(function (r) {
+    var c = byId[r.id];
+    if (!c) return;
+    var session = sessionOf(c.deck);
+    var rung = Number(c.rung) || 0;
+
+    if (r.result === 'again') return;              // requeued in-session, no movement
+    if (r.result === 'fuzzy') rung = Math.max(0, rung - 1);
+    else if (r.result === 'got_it') rung = Math.min(S.ladder.length - 1, rung + 1);
+    else if (r.result === 'easy') rung = Math.min(S.ladder.length - 1, rung + 2);
+
+    c.rung = rung;
+    c.interval = S.ladder[rung];
+    c.due_session = session + c.interval;
+    c.due_date = addDays(t, c.interval);
+    c.last_reviewed_date = t;
+    c.review_count = (Number(c.review_count) || 0) + 1;
+  });
+
+  mirrorSave();
+}
+
+/* -------------------------------------------------------------- the outbox */
+
+function outboxAdd(reviews) {
+  OUT.push({ batch: batchId(reviews), reviews: reviews, at: Date.now() });
+  outboxSave();
+}
+
+function outboxBadge() {
+  var n = OUT.length;
+  var el = $('sync-state');
+  if (!el) return;
+  if (n) {
+    el.textContent = n + ' unsent';
+    el.className = 'syncdot pending';
+  } else if (M) {
+    el.textContent = 'synced';
+    el.className = 'syncdot ok';
+  } else {
+    el.textContent = 'no local copy';
+    el.className = 'syncdot pending';
+  }
+}
+
+/**
+ * Push everything waiting, then pull a fresh copy. Runs in the background and
+ * never blocks the screen. Each batch carries its id, so a push that actually
+ * landed before the connection dropped is ignored on retry rather than
+ * grading everything a second time.
+ */
+function syncNow(opts) {
+  opts = opts || {};
+  if (syncNow._busy) return Promise.resolve(false);
+  if (!store.get('url')) return Promise.resolve(false);
+  syncNow._busy = true;
+
+  var pushed = 0;
+
+  var pushOne = function () {
+    if (!OUT.length) return Promise.resolve();
+    var item = OUT[0];
+    return api('applyReviews', { reviews: item.reviews, batch: item.batch }, true)
+      .then(function () {
+        OUT.shift(); outboxSave(); pushed++; outboxBadge();
+        return pushOne();
+      });
+  };
+
+  return pushOne()
+    .then(function () {
+      return api('sync', {}, false).then(function (d) {
+        M = {
+          pulledAt: Date.now(),
+          today: d.today,
+          cards: d.cards,
+          sessions: d.sessions || {}
+        };
+        S.ladder = d.ladder || S.ladder;
+        mirrorSave();
+      });
+    })
+    .then(function () {
+      syncNow._busy = false;
+      S.decks = localCounts();
+      renderHome();
+      outboxBadge();
+      if (opts.loud) toast(pushed ? 'Synced · ' + pushed + ' sent' : 'Synced');
+      return true;
+    })
+    .catch(function (e) {
+      syncNow._busy = false;
+      outboxBadge();
+      log('  sync deferred: ' + e.message);
+      if (opts.loud) toast('Sync failed — your work is saved locally.');
+      return false;
+    });
+}
+
+function countsFor(deck) {
+  return (S.decks || []).reduce(function (acc, d) {
+    if (deck && d.deck !== deck) return acc;
+    acc.scheduled += (d.due || 0) + (d.overflow || 0);
+    // An older backend does not send this. Treat missing as zero rather than
+    // letting it turn the whole line into NaN.
+    acc.ahead += (typeof d.ahead === 'number' ? d.ahead
+                  : Math.max(0, (d.total || 0) - (d.due || 0) - (d.overflow || 0)));
+    acc.total += (d.total || 0);
+    return acc;
+  }, { scheduled: 0, ahead: 0, total: 0 });
+}
+
+/** Straight from the local copy. No network, no wait. */
+function draw(deck, n, then) {
+  if (!M) { toast('No local copy yet — pull down to sync.'); return; }
+  var cards = localDraw(deck, n);
+  if (!cards.length) { toast('Nothing in that deck.'); return; }
+  if (cards.length < n) toast('Only ' + cards.length + ' available.');
+  then(cards);
+}
+
+function openStart(deck) {
+  S.startDeck = deck || null;
+  var c = countsFor(deck || null);
+
+  var one = deck ? S.decks.filter(function (d) { return d.deck === deck; })[0] : null;
+  $('st-eyebrow').textContent = (deck || 'all decks') +
+    (one && one.session ? ' · session ' + one.session : '');
+  $('st-counts').textContent =
+    (c.scheduled ? c.scheduled + ' scheduled' : '0 cards scheduled') +
+    ' · ' + c.ahead + ' more waiting further out. ' +
+    'Ask for fewer and you get the most recent first; ask for more and it pulls ' +
+    'forward from the days ahead.';
+
+  $('st-n').value = c.scheduled || 10;
+
+  var quick = $('st-quick');
+  quick.innerHTML = '';
+  var opts = [];
+  if (c.scheduled) opts.push({ label: 'All ' + c.scheduled, n: c.scheduled });
+  [10, 25, 50].forEach(function (n) {
+    if (n !== c.scheduled && n <= c.scheduled + c.ahead) opts.push({ label: String(n), n: n });
+  });
+  opts.slice(0, 4).forEach(function (o) {
+    var b = document.createElement('button');
+    b.className = 'grade';
+    b.textContent = o.label;
+    b.onclick = function () { $('st-n').value = o.n; };
+    quick.appendChild(b);
+  });
+
+  show('start');
+}
+
+function askedFor() {
+  return Math.max(1, Math.min(300, parseInt($('st-n').value, 10) || 10));
+}
+
+$('st-go').onclick = function () {
+  draw(S.startDeck, askedFor(), function (cards) {
+    S.queue = cards;
+    S.seen = 0; S.results = {}; S.order = [];
+    S.deckFilter = S.startDeck;
+    show('review');
+    renderCard();
+  });
+};
+
+$('st-voice').onclick = function () {
+  openVoice(S.startDeck);
+  $('v-n').value = askedFor();
+};
+
+$('st-back').onclick = function () { show('home'); };
+
+function renderCard() {
+  var c = S.queue[0];
+  $('rev-eyebrow').textContent =
+    (c.ahead ? 'ahead of schedule · ' : '') + S.queue.length + ' to go';
+  $('rev-id').textContent = c.id;
+  $('rev-deck').textContent = c.deck;
+  $('rev-front').textContent = c.front;
+  $('rev-back').textContent = c.back || '(nothing on the back)';
+  $('rev-back').classList.add('hidden');
+  $('reveal').classList.remove('hidden');
+  $('grades').classList.add('hidden');
+
+  var r = $('rev-rungs');
+  r.innerHTML = '';
+  S.ladder.forEach(function (_, i) {
+    var d = document.createElement('span');
+    d.className = 'rung' + (i < c.rung ? ' on' : i === c.rung ? ' here' : '');
+    r.appendChild(d);
+  });
+
+  var at = function (n) {
+    var i = Math.max(0, Math.min(S.ladder.length - 1, n));
+    return S.ladder[i] + 'd';
+  };
+  $('lbl-fuzzy').textContent = at(c.rung - 1);
+  $('lbl-got').textContent = at(c.rung + 1);
+  $('lbl-easy').textContent = at(c.rung + 2);
+}
+
+$('reveal').onclick = function () {
+  $('rev-back').classList.remove('hidden');
+  this.classList.add('hidden');
+  $('grades').classList.remove('hidden');
+};
+
+Array.prototype.forEach.call(document.querySelectorAll('.grade'), function (b) {
+  b.onclick = function () { grade(b.getAttribute('data-r')); };
+});
+
+function grade(result) {
+  var c = S.queue.shift();
+  if (!S.results[c.id]) S.order.push(c.id);
+  S.results[c.id] = result;
+
+  if (result === 'again') {
+    S.queue.push(c);           // back into tonight's pile
+  }
+
+  if (S.queue.length) { renderCard(); return; }
+  finishReview();
+}
+
+$('rev-quit').onclick = function () { finishReview(); };
+
+function finishReview() {
+  var reviews = S.order.map(function (id) { return { id: id, result: S.results[id] }; });
+  if (!reviews.length) { show('home'); return; }
+
+  // Local first: the ladder moves, the outbox takes the results, you are done.
+  // The push happens behind you and survives being offline.
+  localApply(reviews);
+  outboxAdd(reviews);
+  S.results = {}; S.order = [];
+  S.decks = localCounts();
+  renderHome();
+  show('home');
+  toast('Recorded ' + reviews.length + '.');
+  syncNow();
+}
+
+/* ----------------------------------------------------------- new card */
+
+$('go-new').onclick = function () { show('new'); };
+$('n-back-btn').onclick = function () { show('home'); };
+
+$('n-save').onclick = function () {
+  var deck = ($('n-deck-new').value || '').trim() || $('n-deck').value;
+  var front = $('n-front').value.trim();
+  var back = $('n-back').value.trim();
+  if (!front) { toast('The front is empty.'); return; }
+
+  api('addCard', { deck: deck, front: front, back: back }, true)
+    .then(function (d) {
+      $('n-front').value = ''; $('n-back').value = ''; $('n-deck-new').value = '';
+      if (M) {
+        // Show it straight away; the next pull replaces this with the real row.
+        M.cards.push({
+          id: d.id, deck: deck, front: front, back: back,
+          rung: 0, interval: 1,
+          due_session: sessionOf(deck) + 1,
+          due_date: addDays(todayStr(), 1),
+          created_date: todayStr(), last_reviewed_date: '', review_count: 0
+        });
+        mirrorSave();
+        S.decks = localCounts();
+        renderHome();
+      }
+      toast('Saved as ' + d.id + '. Back tomorrow.');
+      return syncNow();
+    })
+    .then(function () { show('home'); })
+    .catch(function (e) { toast(e.message); });
+};
+
+/* -------------------------------------------------------------- voice */
+
+var V = { deck: null };
+
+$('go-voice').onclick = function () { openVoice(null); };
+
+/**
+ * Same shape as the review launcher: pick a deck, see what is scheduled, ask
+ * for however many you actually want. The count is the batch size — that is
+ * the only knob, and it does the job the old prev/next batching was doing.
+ */
+function openVoice(deck) {
+  var sel = $('v-deck');
+  sel.innerHTML = '<option value="">All decks</option>';
+  S.decks.forEach(function (d) {
+    var o = document.createElement('option');
+    o.value = d.deck;
+    o.textContent = d.deck + ' (' + (d.due + d.overflow) + ')';
+    sel.appendChild(o);
+  });
+  sel.value = deck || '';
+
+  $('v-payload').value = '';
+  $('v-return').value = '';
+  voiceCounts();
+  show('voice');
+}
+
+function voiceCounts() {
+  var deck = $('v-deck').value;
+  var c = countsFor(deck || null);
+  $('v-n').value = c.scheduled || 8;
+  $('v-status').textContent = c.scheduled
+    ? c.scheduled + ' scheduled · ' + c.ahead + ' more waiting further out'
+    : 'nothing scheduled · ' + c.ahead + ' waiting further out';
+  $('v-status').style.color = 'var(--muted)';
+}
+
+$('v-deck').onchange = voiceCounts;
+
+function buildPayload(cards) {
+  // Kept deliberately terse: the iPhone Claude app turns a long paste into an
+  // attachment, and attachments get skimmed rather than worked through.
+  // The fenced block at the end is what gives the results a one-tap copy
+  // button, which is the only comfortable way back into this app on a phone.
+  var head =
+    'Quiz me on these, one at a time, by voice. Read the front, wait for my ' +
+    'answer, then read the back and ask how it went. My options are: again ' +
+    '(ask me again later in this run), fuzzy, got it, easy.\n\n' +
+    'When we finish, say "we are done — leave voice mode and I will post the ' +
+    'results", and then print the results as a fenced code block so I can copy ' +
+    'them in one tap. Nothing after it. Like this:\n\n' +
+    '```\n#REVIEW\nc0000 | got_it\nc0001 | fuzzy\n#END\n```\n\n' +
+    'One line per card, result as again / fuzzy / got_it / easy.\n\n';
+
+  var body = cards.map(function (c) {
+    var f = c.front.replace(/\s+/g, ' ').trim();
+    var b = (c.back || '').replace(/\s+/g, ' ').trim();
+    return c.id + ' | ' + f + (b ? ' >> ' + b : '');
+  }).join('\n');
+
+  return head + body;
+}
+
+$('v-copy').onclick = function () {
+  var deck = $('v-deck').value || null;
+  var n = Math.max(1, Math.min(100, parseInt($('v-n').value, 10) || 8));
+
+  draw(deck, n, function (cards, info) {
+    var ta = $('v-payload');
+    ta.value = buildPayload(cards);
+
+    var chars = ta.value.length;
+    var warn = chars > 1800 ? '  ·  long, may arrive as a file' : '';
+    $('v-status').textContent = cards.length + ' cards  ·  ' + chars + ' chars' + warn;
+    $('v-status').style.color = chars > 1800 ? 'var(--rose)' : 'var(--muted)';
+
+    var done = function () { toast('Copied. Open Claude and paste.'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(done, fallback);
+    } else { fallback(); }
+    function fallback() {
+      ta.removeAttribute('readonly');
+      ta.select(); ta.setSelectionRange(0, 999999);
+      try { document.execCommand('copy'); done(); }
+      catch (e) { toast('Select the text and copy it by hand.'); }
+      ta.setAttribute('readonly', 'readonly');
+    }
+  });
+};
+
+$('v-apply').onclick = function () {
+  var reviews = parseReturn($('v-return').value);
+  if (!reviews.length) { toast('No #REVIEW lines found in that.'); return; }
+
+  var known = {};
+  if (M) M.cards.forEach(function (c) { known[c.id] = true; });
+  var unknown = reviews.filter(function (r) { return !known[r.id]; }).length;
+
+  localApply(reviews);
+  outboxAdd(reviews);
+  $('v-return').value = '';
+  S.decks = localCounts();
+  renderHome();
+  show('home');
+  toast('Recorded ' + (reviews.length - unknown) +
+        (unknown ? ' · ' + unknown + ' id not recognised' : '') + '.');
+  syncNow();
+};
+
+function parseReturn(text) {
+  var out = [], on = false;
+  var ok = { again: 1, fuzzy: 1, got_it: 1, easy: 1 };
+  text.split('\n').forEach(function (raw) {
+    var line = raw.trim();
+    if (/^#REVIEW/i.test(line)) { on = true; return; }
+    if (/^#END/i.test(line)) { on = false; return; }
+    if (!on || !line) return;
+    var p = line.split('|');
+    if (p.length < 2) return;
+    var id = p[0].trim();
+    var res = p[1].trim().toLowerCase().replace(/[\s-]+/g, '_');
+    if (res === 'again_now') res = 'again';
+    if (res === 'gotit') res = 'got_it';
+    if (id && ok[res]) out.push({ id: id, result: res });
+  });
+  return out;
+}
+
+$('v-back').onclick = function () { show('home'); };
+$('home-btn').onclick = function () { show('home'); };
+
+/* ----------------------------------------------------------- settings */
+
+$('gear').onclick = function () {
+  mirrorNote();
+  $('c-url').value = store.get('url');
+  $('c-token').value = store.get('token');
+  $('c-ladder').textContent = 'Ladder: ' + S.ladder.join(' · ') + ' days. ' +
+    'A card moves one step at a time from wherever it already sits.';
+  $('c-log').value = LOG.join('\n');
+  show('settings');
+};
+
+$('c-save').onclick = function () {
+  store.set('url', $('c-url').value.trim());
+  store.set('token', $('c-token').value.trim());
+  store.set('deck', $('c-deck').value);
+  toast('Saved.');
+  load().then(function () { show('home'); }).catch(function (e) { toast(e.message); });
+};
+
+$('c-sync').onclick = function () {
+  toast('Syncing…', true);
+  syncNow({ loud: true }).then(mirrorNote);
+};
+
+function mirrorNote() {
+  var n = M ? M.cards.length : 0;
+  var when = M && M.pulledAt ? new Date(M.pulledAt).toLocaleString() : 'never';
+  $('c-mirror').textContent =
+    n + ' cards held on this phone · last pulled ' + when +
+    (OUT.length ? ' · ' + OUT.length + ' result set waiting to send' : '');
+}
+
+$('c-back').onclick = function () { show('home'); };
+$('go-all').onclick = function () { openStart(null); };
+
+$('c-test').onclick = function () {
+  // Test what is typed in the boxes right now, not what was last saved.
+  store.set('url', $('c-url').value.trim());
+  store.set('token', $('c-token').value.trim());
+
+  LOG = [];
+  log('--- test run ---');
+  log('page ' + location.protocol + '//' + location.host);
+  log('url  ' + store.get('url'));
+  log('token ' + store.get('token').length + ' chars');
+
+  api('state', {}, false)
+    .then(function (d) {
+      log('SUCCESS. Backend is reachable and the token matched.');
+      log('decks: ' + (d.decks.length ? d.decks.map(function (x) { return x.deck; }).join(', ') : 'none yet'));
+      toast('Connected.');
+    })
+    .catch(function (e) { log('RESULT: ' + e.message); toast(e.message); });
+};
+
+$('c-copylog').onclick = function () {
+  var ta = $('c-log');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(function () { toast('Log copied.'); });
+  } else {
+    ta.removeAttribute('readonly'); ta.select();
+    try { document.execCommand('copy'); toast('Log copied.'); } catch (e) { toast('Select and copy by hand.'); }
+    ta.setAttribute('readonly', 'readonly');
+  }
+};
+
+/* --------------------------------------------------------------- boot */
+
+$('c-build').textContent = 'Build ' + BUILD;
+log('build ' + BUILD);
+
+if (!store.get('url')) {
+  $('gear').click();
+  toast('Add your web app URL to begin.');
+} else {
+  load().catch(function (e) { toast(e.message); });
+}
+
+})();
+</script>
+</body>
+</html>

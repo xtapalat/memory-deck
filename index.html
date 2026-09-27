@@ -299,6 +299,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible{
     <button class="btn primary" id="c-save" style="margin-top:18px">Save settings</button>
     <button class="btn quiet" id="c-back">Back to decks</button>
 
+    <button class="btn" id="c-import" style="margin-top:20px">Import cards…</button>
+
     <button class="btn" id="c-sync" style="margin-top:20px">Sync now</button>
     <p class="note" id="c-mirror"></p>
     <p class="note" id="c-build"></p>
@@ -307,6 +309,31 @@ input:focus,select:focus,textarea:focus,button:focus-visible{
     <textarea class="mono" id="c-log" readonly style="min-height:180px" placeholder="Nothing logged yet."></textarea>
     <button class="btn quiet" id="c-copylog">Copy the log</button>
     <p class="note" id="c-ladder"></p>
+  </section>
+
+  <!-- ============================================ IMPORT -->
+  <section class="screen" id="s-import">
+    <h2>Import cards</h2>
+    <p class="note">Copy the instructions into any Claude conversation that already has cards in it. Paste the block it hands back into the box below.</p>
+
+    <label for="i-deck">Deck</label>
+    <select id="i-deck"></select>
+    <input id="i-deck-new" placeholder="…or name a new deck" style="margin-top:8px">
+
+    <label for="i-per" style="margin-top:14px">Cards per day</label>
+    <input id="i-per" type="number" min="1" step="1" value="10" inputmode="numeric">
+    <p class="note">They start tomorrow and spread forward at this rate. A day has to be finished before the deck moves on, so keep it to a night's work.</p>
+
+    <button class="btn primary" id="i-copy" style="margin-top:14px">Copy the instructions</button>
+    <textarea class="mono" id="i-instr" readonly style="min-height:150px"></textarea>
+
+    <label for="i-paste" style="margin-top:26px">Paste Claude's block here</label>
+    <textarea class="mono" id="i-paste" style="min-height:160px" placeholder="#CARDS deck=…&#10;front &gt;&gt; back&#10;#END"></textarea>
+    <p class="note" id="i-count"></p>
+
+    <button class="btn primary" id="i-process">Process</button>
+    <p class="note" id="i-result"></p>
+    <button class="btn quiet" id="i-back">Back to settings</button>
   </section>
 
 </div>
@@ -336,7 +363,7 @@ var store = (function () {
 
 var API = { everWorked: false, inFlight: false };
 
-var BUILD = '2026-09-04 · finish a day to advance it';
+var BUILD = '2026-09-05 · import cards from any Claude';
 
 var S = {
   session: 0, today: '',
@@ -560,7 +587,7 @@ function renderHome() {
     list.appendChild(b);
   });
 
-  var sel = [$('n-deck'), $('c-deck')];
+  var sel = [$('n-deck'), $('c-deck'), $('i-deck')];
   var names = S.decks.map(function (d) { return d.deck; });
   if (!names.length) names = ['journal'];
   sel.forEach(function (el) {
@@ -1199,6 +1226,199 @@ function finishReview() {
   toast('Recorded ' + reviews.length + '.');
   syncNow();
 }
+
+/* ======================================================= import cards
+ *
+ * The voice handoff in reverse. That one hands cards out to Claude to quiz
+ * you on; this one takes cards back from a Claude conversation that happened
+ * to produce some — a session about wine, or bridge, or Portuguese — and puts
+ * them in a deck without a detour through a CSV and the Sheets import menu.
+ *
+ * The round trip is: pick a deck here, copy the instructions, paste them into
+ * that other conversation, copy the block it writes, paste it back here.
+ */
+
+function importDeck() {
+  return ($('i-deck-new').value || '').trim() || $('i-deck').value;
+}
+
+function importPer() {
+  return Math.max(1, Math.round(Number($('i-per').value) || 10));
+}
+
+/**
+ * Kept deliberately short. Anything much past about 1,800 characters arrives
+ * in the iPhone Claude app as an attachment rather than a message, and an
+ * attachment gets skimmed instead of followed.
+ */
+function importInstructions(deck, per) {
+  return [
+    'Turn the flashcards from this conversation into an import block for my',
+    'Memory Deck app. They are going into my "' + deck + '" deck.',
+    '',
+    'Format:',
+    '  #CARDS deck=' + deck,
+    '  front >> back',
+    '  front >> back',
+    '  #END',
+    '',
+    'Rules:',
+    '- One card per line. Front, then >>, then back.',
+    '- Never break a card across lines. Use "; " where you want a list.',
+    '- No numbering, no bullets, no bold, nothing else inside the block.',
+    '- Front is the prompt, short. Back is the answer or the detail.',
+    '- Drop any card with nothing on the front.',
+    '- Past 60 cards, give me several blocks of 60 rather than one long one.',
+    '',
+    'Put the block in a fenced code block on its own so I can copy it in one',
+    'tap, and say nothing after it.'
+  ].join('\n');
+}
+
+function refreshImport() {
+  $('i-instr').value = importInstructions(importDeck(), importPer());
+}
+
+/**
+ * Forgiving on the way in. The other end is a language model following
+ * instructions from memory, so it will sometimes number the lines, or use ::
+ * instead of >>, or wrap the block in backticks. None of that is worth a
+ * failed import.
+ */
+function parseCardBlock(text) {
+  var out = { deck: '', cards: [], bad: 0 };
+  var lines = String(text || '').split(/\r?\n/);
+
+  lines.forEach(function (raw) {
+    var line = raw.replace(/^\s+|\s+$/g, '');
+    if (!line) return;
+    if (/^```/.test(line)) return;
+
+    if (/^#\s*CARDS\b/i.test(line)) {
+      var m = /deck\s*=\s*(.+)$/i.exec(line);
+      if (m) out.deck = m[1].trim();
+      return;
+    }
+    if (/^#\s*END\b/i.test(line)) return;
+    if (/^#/.test(line)) return;
+
+    line = line.replace(/^[-*•]\s+/, '').replace(/^\d+[.)]\s+/, '');
+
+    var parts = line.split(/\s*(?:>>|::|\|)\s*/);
+    if (parts.length < 2) { out.bad++; return; }
+
+    var front = parts.shift().trim();
+    var back = parts.join(' | ').trim();
+    if (!front) { out.bad++; return; }
+
+    out.cards.push({ front: front, back: back });
+  });
+
+  return out;
+}
+
+$('c-import').onclick = function () {
+  var def = store.get('deck');
+  var names = deckNames();
+  if (def && names.indexOf(def) > -1) $('i-deck').value = def;
+  $('i-result').textContent = '';
+  refreshImport();
+  show('import');
+};
+
+$('i-back').onclick = function () { show('settings'); };
+$('i-deck').onchange = refreshImport;
+$('i-deck-new').oninput = refreshImport;
+$('i-per').oninput = refreshImport;
+
+$('i-copy').onclick = function () {
+  refreshImport();
+  var ta = $('i-instr');
+  var done = function () { toast('Instructions copied.'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done, function () {
+      ta.select(); try { document.execCommand('copy'); done(); }
+      catch (e) { toast('Select and copy by hand.'); }
+    });
+  } else {
+    ta.select();
+    try { document.execCommand('copy'); done(); }
+    catch (e) { toast('Select and copy by hand.'); }
+  }
+};
+
+$('i-paste').oninput = function () {
+  var p = parseCardBlock($('i-paste').value);
+  $('i-count').textContent = p.cards.length
+    ? p.cards.length + ' card' + (p.cards.length === 1 ? '' : 's') + ' read' +
+      (p.bad ? ' · ' + p.bad + ' line' + (p.bad === 1 ? '' : 's') + ' skipped' : '')
+    : '';
+};
+
+$('i-process').onclick = function () {
+  var deck = importDeck();
+  var per = importPer();
+  var p = parseCardBlock($('i-paste').value);
+
+  if (!p.cards.length) {
+    $('i-result').textContent = 'Nothing readable in there. Each line needs a >> between the front and the back.';
+    return;
+  }
+  if (p.deck && p.deck.toLowerCase() !== deck.toLowerCase()) {
+    log('  import: block says deck=' + p.deck + ', using ' + deck);
+  }
+
+  // A block pasted twice is far more likely to be a slip than an intention.
+  var have = {};
+  if (M) {
+    M.cards.forEach(function (c) {
+      if (c.deck === deck) have[String(c.front).trim().toLowerCase()] = 1;
+    });
+  }
+  var fresh = [], dupes = 0;
+  p.cards.forEach(function (c) {
+    if (have[c.front.toLowerCase()]) { dupes++; return; }
+    have[c.front.toLowerCase()] = 1;
+    fresh.push(c);
+  });
+
+  if (!fresh.length) {
+    $('i-result').textContent = 'All ' + p.cards.length + ' are already in ' + deck + '. Nothing added.';
+    return;
+  }
+
+  outboxAdd('addCards', {
+    deck: deck, per: per, cards: fresh, session: sessionOf(deck)
+  });
+
+  var days = Math.ceil(fresh.length / per);
+  var tail = dupes ? ' · ' + dupes + ' already there, skipped' : '';
+  $('i-paste').value = '';
+  $('i-count').textContent = '';
+  $('i-deck-new').value = '';
+  $('i-result').textContent =
+    fresh.length + ' card' + (fresh.length === 1 ? '' : 's') + ' queued for ' + deck +
+    ' · ' + per + ' a day over ' + days + ' day' + (days === 1 ? '' : 's') + tail;
+
+  outboxBadge();
+  toast('Sending…');
+  syncNow().then(function (ok) {
+    if (!ok) {
+      $('i-result').textContent += ' · waiting for a connection';
+      toast('Saved here — will send when you have a connection.');
+      return;
+    }
+    // Say what actually happened rather than what was meant to. A brand new
+    // deck has no clock yet, so the day tick that follows the pull starts it,
+    // and the first batch is due tonight rather than tomorrow.
+    var n = dueCount(deck);
+    $('i-result').textContent =
+      fresh.length + ' card' + (fresh.length === 1 ? '' : 's') + ' added to ' + deck +
+      ' · ' + per + ' a day over ' + days + ' day' + (days === 1 ? '' : 's') + tail +
+      ' · ' + (n ? n + ' due now' : 'first ' + Math.min(per, fresh.length) + ' due tomorrow');
+    toast('Added to the sheet.');
+  });
+};
 
 /* ----------------------------------------------------------- new card */
 
